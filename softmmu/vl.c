@@ -1670,7 +1670,7 @@ void qemu_main_loop(void)
 
 static void version(void)
 {
-    printf("QEMU emulator version " QEMU_FULL_VERSION "\n"
+    printf("[better_vbios_handling branch] QEMU emulator version " QEMU_FULL_VERSION "\n"
            QEMU_COPYRIGHT "\n");
 }
 
