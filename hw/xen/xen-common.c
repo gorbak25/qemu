@@ -21,7 +21,7 @@
 #include "migration/global_state.h"
 #include "hw/boards.h"
 
-//#define DEBUG_XEN
+#define DEBUG_XEN
 
 #ifdef DEBUG_XEN
 #define DPRINTF(fmt, ...) \
