@@ -105,7 +105,8 @@ int xtensa_cpu_gdb_read_register(CPUState *cs, GByteArray *mem_buf, int n)
         default:
             qemu_log_mask(LOG_UNIMP, "%s from reg %d of unsupported size %d\n",
                           __func__, n, reg->size);
-            return gdb_get_zeroes(mem_buf, reg->size);
+            memset(mem_buf, 0, reg->size);
+            return reg->size;
         }
 
     case xtRegisterTypeWindow: /*a*/
@@ -114,7 +115,8 @@ int xtensa_cpu_gdb_read_register(CPUState *cs, GByteArray *mem_buf, int n)
     default:
         qemu_log_mask(LOG_UNIMP, "%s from reg %d of unsupported type %d\n",
                       __func__, n, reg->type);
-        return gdb_get_zeroes(mem_buf, reg->size);
+        memset(mem_buf, 0, reg->size);
+        return reg->size;
     }
 }
 
