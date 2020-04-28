@@ -848,7 +848,7 @@ vg_handle_ctrl(VuDev *dev, int qidx)
             QTAILQ_INSERT_TAIL(&vg->fenceq, cmd, next);
             vg->inflight++;
         } else {
-            free(cmd);
+            g_free(cmd);
         }
     }
 }
@@ -939,7 +939,7 @@ vg_handle_cursor(VuDev *dev, int qidx)
         }
         vu_queue_push(dev, vq, elem, 0);
         vu_queue_notify(dev, vq);
-        free(elem);
+        g_free(elem);
     }
 }
 
