@@ -807,7 +807,6 @@ MINGW32*)
     audio_drv_list=""
   fi
   supported_os="yes"
-  pie="no"
 ;;
 GNU/kFreeBSD)
   bsd="yes"
