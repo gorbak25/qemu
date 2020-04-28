@@ -37,7 +37,6 @@
 #include "qemu/queue.h"
 #include "qemu/host-utils.h"
 #include "qemu/base64.h"
-#include "commands-common.h"
 
 #ifndef SHTDN_REASON_FLAG_PLANNED
 #define SHTDN_REASON_FLAG_PLANNED 0x80000000
@@ -51,11 +50,11 @@
 
 #define INVALID_SET_FILE_POINTER ((DWORD)-1)
 
-struct GuestFileHandle {
+typedef struct GuestFileHandle {
     int64_t id;
     HANDLE fh;
     QTAILQ_ENTRY(GuestFileHandle) next;
-};
+} GuestFileHandle;
 
 static struct {
     QTAILQ_HEAD(, GuestFileHandle) filehandles;
@@ -127,7 +126,7 @@ static int64_t guest_file_handle_add(HANDLE fh, Error **errp)
     return handle;
 }
 
-GuestFileHandle *guest_file_handle_find(int64_t id, Error **errp)
+static GuestFileHandle *guest_file_handle_find(int64_t id, Error **errp)
 {
     GuestFileHandle *gfh;
     QTAILQ_FOREACH(gfh, &guest_file_state.filehandles, next) {
