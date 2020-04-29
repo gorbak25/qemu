@@ -183,6 +183,15 @@ static void pc_init1(MachineState *machine,
     } else if (machine->kernel_filename != NULL) {
         /* For xen HVM direct kernel boot, load linux here */
         xen_load_linux(pcms);
+    } else {
+        pcmc->has_acpi_build = false;
+
+        FWCfgState *fw_cfg;
+
+        fw_cfg = fw_cfg_init_io(FW_CFG_IO_BASE);
+        rom_set_fw(fw_cfg);
+
+        pcms->fw_cfg = fw_cfg;
     }
 
     gsi_state = g_malloc0(sizeof(*gsi_state));
@@ -401,6 +410,7 @@ static void pc_xen_hvm_init(MachineState *machine)
 
     pc_xen_hvm_init_pci(machine);
     pci_create_simple(pcms->bus, -1, "xen-platform");
+    machine->suppress_vmdesc = true;
 }
 #endif
 

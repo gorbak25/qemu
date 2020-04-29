@@ -20,6 +20,7 @@
 #include <sys/prctl.h>
 #include <seccomp.h>
 #include "sysemu/seccomp.h"
+#include <linux/seccomp.h>
 
 /* For some architectures (notably ARM) cacheflush is not supported until
  * libseccomp 2.2.3, but configure enforces that we are using a more recent
@@ -50,6 +51,7 @@ static const struct QemuSeccompSyscall blacklist[] = {
     { SCMP_SYS(syslog),                 QEMU_SECCOMP_SET_DEFAULT },
     { SCMP_SYS(mount),                  QEMU_SECCOMP_SET_DEFAULT },
     { SCMP_SYS(umount),                 QEMU_SECCOMP_SET_DEFAULT },
+    { SCMP_SYS(umount2),                QEMU_SECCOMP_SET_DEFAULT },
     { SCMP_SYS(kexec_load),             QEMU_SECCOMP_SET_DEFAULT },
     { SCMP_SYS(afs_syscall),            QEMU_SECCOMP_SET_DEFAULT },
     { SCMP_SYS(break),                  QEMU_SECCOMP_SET_DEFAULT },
@@ -60,6 +62,11 @@ static const struct QemuSeccompSyscall blacklist[] = {
     { SCMP_SYS(mpx),                    QEMU_SECCOMP_SET_DEFAULT },
     { SCMP_SYS(prof),                   QEMU_SECCOMP_SET_DEFAULT },
     { SCMP_SYS(profil),                 QEMU_SECCOMP_SET_DEFAULT },
+    { SCMP_SYS(kcmp),                   QEMU_SECCOMP_SET_DEFAULT },
+    { SCMP_SYS(perf_event_open),        QEMU_SECCOMP_SET_DEFAULT },
+    { SCMP_SYS(process_vm_readv),       QEMU_SECCOMP_SET_DEFAULT },
+    { SCMP_SYS(process_vm_writev),      QEMU_SECCOMP_SET_DEFAULT },
+    { SCMP_SYS(ptrace),                 QEMU_SECCOMP_SET_DEFAULT },
     { SCMP_SYS(putpmsg),                QEMU_SECCOMP_SET_DEFAULT },
     { SCMP_SYS(security),               QEMU_SECCOMP_SET_DEFAULT },
     { SCMP_SYS(stty),                   QEMU_SECCOMP_SET_DEFAULT },
@@ -72,6 +79,7 @@ static const struct QemuSeccompSyscall blacklist[] = {
     { SCMP_SYS(bdflush),                QEMU_SECCOMP_SET_OBSOLETE },
     { SCMP_SYS(create_module),          QEMU_SECCOMP_SET_OBSOLETE },
     { SCMP_SYS(get_kernel_syms),        QEMU_SECCOMP_SET_OBSOLETE },
+    { SCMP_SYS(nfsservctl),             QEMU_SECCOMP_SET_OBSOLETE },
     { SCMP_SYS(query_module),           QEMU_SECCOMP_SET_OBSOLETE },
     { SCMP_SYS(sgetmask),               QEMU_SECCOMP_SET_OBSOLETE },
     { SCMP_SYS(ssetmask),               QEMU_SECCOMP_SET_OBSOLETE },
@@ -93,6 +101,7 @@ static const struct QemuSeccompSyscall blacklist[] = {
     { SCMP_SYS(fork),                   QEMU_SECCOMP_SET_SPAWN },
     { SCMP_SYS(vfork),                  QEMU_SECCOMP_SET_SPAWN },
     { SCMP_SYS(execve),                 QEMU_SECCOMP_SET_SPAWN },
+    { SCMP_SYS(execveat),               QEMU_SECCOMP_SET_SPAWN },
     /* resource control */
     { SCMP_SYS(getpriority),            QEMU_SECCOMP_SET_RESOURCECTL },
     { SCMP_SYS(setpriority),            QEMU_SECCOMP_SET_RESOURCECTL },
@@ -107,16 +116,49 @@ static const struct QemuSeccompSyscall blacklist[] = {
     { SCMP_SYS(sched_get_priority_min), QEMU_SECCOMP_SET_RESOURCECTL },
 };
 
+static inline __attribute__((unused)) int
+qemu_seccomp(unsigned int operation, unsigned int flags, void *args)
+{
+#ifdef __NR_seccomp
+    return syscall(__NR_seccomp, operation, flags, args);
+#else
+    errno = ENOSYS;
+    return -1;
+#endif
+}
+
+static uint32_t qemu_seccomp_get_kill_action(void)
+{
+#if defined(SECCOMP_GET_ACTION_AVAIL) && defined(SCMP_ACT_KILL_PROCESS) && \
+    defined(SECCOMP_RET_KILL_PROCESS)
+    {
+        uint32_t action = SECCOMP_RET_KILL_PROCESS;
+
+        if (qemu_seccomp(SECCOMP_GET_ACTION_AVAIL, 0, &action) == 0) {
+            return SCMP_ACT_KILL_PROCESS;
+        }
+    }
+#endif
+
+    return SCMP_ACT_TRAP;
+}
+
 
 static int seccomp_start(uint32_t seccomp_opts)
 {
     int rc = 0;
     unsigned int i = 0;
     scmp_filter_ctx ctx;
+    uint32_t action = qemu_seccomp_get_kill_action();
 
     ctx = seccomp_init(SCMP_ACT_ALLOW);
     if (ctx == NULL) {
         rc = -1;
+        goto seccomp_return;
+    }
+
+    rc = seccomp_attr_set(ctx, SCMP_FLTATR_CTL_TSYNC, 1);
+    if (rc != 0) {
         goto seccomp_return;
     }
 
@@ -125,7 +167,7 @@ static int seccomp_start(uint32_t seccomp_opts)
             continue;
         }
 
-        rc = seccomp_rule_add_array(ctx, SCMP_ACT_KILL, blacklist[i].num,
+        rc = seccomp_rule_add_array(ctx, action, blacklist[i].num,
                                     blacklist[i].narg, blacklist[i].arg_cmp);
         if (rc < 0) {
             goto seccomp_return;

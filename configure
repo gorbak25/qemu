@@ -423,6 +423,7 @@ rbd=""
 smartcard=""
 libusb=""
 usb_redir=""
+stubdom="no"
 opengl=""
 opengl_dmabuf="no"
 cpuid_h="no"
@@ -1286,6 +1287,8 @@ for opt do
   ;;
   --enable-usb-redir) usb_redir="yes"
   ;;
+  --enable-stubdom) stubdom="yes"
+  ;;
   --disable-zlib-test) zlib="no"
   ;;
   --disable-lzo) lzo="no"
@@ -1687,6 +1690,7 @@ disabled with --disable-FEATURE, default is enabled if available:
   usb-redir       usb network redirection support
   lzo             support of lzo compression library
   snappy          support of snappy compression library
+  enable-stubdom  support for Xen stubdom
   bzip2           support of bzip2 compression library
                   (for reading bzip2-compressed dmg images)
   seccomp         seccomp support
@@ -5932,6 +5936,7 @@ if test "$xen" = "yes" ; then
   echo "xen ctrl version  $xen_ctrl_version"
   echo "pv dom build      $xen_pv_domain_build"
 fi
+echo "stubdom support   $stubdom"
 echo "brlapi support    $brlapi"
 echo "bluez  support    $bluez"
 echo "Documentation     $docs"
@@ -6557,6 +6562,11 @@ if test "$rbd" = "yes" ; then
   echo "CONFIG_RBD=m" >> $config_host_mak
   echo "RBD_CFLAGS=$rbd_cflags" >> $config_host_mak
   echo "RBD_LIBS=$rbd_libs" >> $config_host_mak
+fi
+
+# stubdom support
+if test "$stubdom" = "yes"; then
+  echo "CONFIG_STUBDOM=y" >> $config_host_mak
 fi
 
 echo "CONFIG_COROUTINE_BACKEND=$coroutine" >> $config_host_mak

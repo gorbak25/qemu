@@ -29,7 +29,7 @@
 #include <xen/hvm/params.h>
 #include <xen/hvm/e820.h>
 
-//#define DEBUG_XEN_HVM
+#define DEBUG_XEN_HVM
 
 #ifdef DEBUG_XEN_HVM
 #define DPRINTF(fmt, ...) \
@@ -1405,6 +1405,10 @@ void xen_hvm_init(PCMachineState *pcms, MemoryRegion **ram_memory)
     state->wakeup.notify = xen_wakeup_notifier;
     qemu_register_wakeup_notifier(&state->wakeup);
 
+    if (xen_stubdom_enable()) {
+        xc_set_hvm_param(xen_xc, xen_domid, HVM_PARAM_DM_DOMAIN, DOMID_SELF);
+    }
+
     rc = xen_map_ioreq_server(state);
     if (rc < 0) {
         goto err;
@@ -1479,12 +1483,20 @@ void xen_hvm_init(PCMachineState *pcms, MemoryRegion **ram_memory)
     QLIST_INIT(&state->dev_list);
     device_listener_register(&state->device_listener);
 
+#ifndef CONFIG_STUBDOM
     /* Initialize backend core & drivers */
     if (xen_be_init() != 0) {
         error_report("xen backend core setup failed");
         goto err;
     }
     xen_be_register_common();
+#else
+    xenstore = xs_daemon_open();
+    if (!xenstore) {
+        error_report("can't connect to xenstored");
+        goto err;
+    }
+#endif
 
     QLIST_INIT(&xen_physmap);
     xen_read_physmap(state);
