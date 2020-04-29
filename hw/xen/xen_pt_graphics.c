@@ -283,7 +283,7 @@ void igd_write_opregion(XenPCIPassthroughState *s, uint32_t val)
     igd_guest_opregion = (unsigned long)(val & ~XEN_PCI_INTEL_OPREGION_MASK)
                             | (igd_host_opregion & XEN_PCI_INTEL_OPREGION_MASK);
 
-    ret = xc_domain_iomem_permission(xen_xc, xen_domid,
+    /*ret = xc_domain_iomem_permission(xen_xc, xen_domid,
             (unsigned long)(igd_host_opregion >> XC_PAGE_SHIFT),
             XEN_PCI_INTEL_OPREGION_PAGES,
             XEN_PCI_INTEL_OPREGION_ENABLE_ACCESSED);
@@ -294,7 +294,7 @@ void igd_write_opregion(XenPCIPassthroughState *s, uint32_t val)
                     (unsigned long)(igd_host_opregion >> XC_PAGE_SHIFT)),
         igd_guest_opregion = 0;
         return;
-    }
+    }*/
 
     ret = xc_domain_memory_mapping(xen_xc, xen_domid,
             (unsigned long)(igd_guest_opregion >> XC_PAGE_SHIFT),
